@@ -1,0 +1,53 @@
+<textarea id="$txt" style="width: 100%; height: 100%;"></textarea>
+<script>
+function stop(vt){
+  vt.preventDefault();
+  vt.stopPropagation();
+}
+function load(file, ondata, onfail){
+  with(new FileReader){
+    onload = function(){ ondata(result.replace(/^.+$/gm, function($){
+      var arr = $.split('&');
+      for(var i = 0; i < arr.length; i++){
+        var line = arr[i];
+        var x = line.indexOf('=');
+        if(x < 1) continue;
+        var k = line.substr(0, x++);
+        var v = line.substr(x);
+        v = (k == "isOriginal") ? (v ? '是' : '否') : decodeURIComponent(v.replace(/\+/g, ' '));
+        k = map[k] || k;
+        arr[i] = k + ": " + v;
+      }
+      return arr.join('\r\n');
+    })) };
+    onloadend = onfail && function(){ error && onfail(error) };
+    readAsText(file);
+  }
+}
+with(document.body){
+  addEventListener("dragover", function(vt){
+    stop(vt);
+    var dt = vt.dataTransfer;
+    if(!dt.items) return; // fix for IE11
+    with(dt){
+      dropEffect = items.length === 1 && items[0].kind === "file" ? "move" : "none";
+    }
+  });
+  var map = {
+    title: "标题",
+    upName: "UP主",
+    zone: "分区",
+    keyWords: "关键字",
+    description: "说明",
+    path: "文件名",
+    isOriginal: "新文件"
+  };
+  addEventListener("drop", function(vt){
+    stop(vt);
+    load(vt.dataTransfer.files[0], function($){ $txt.value += $ }, function($){ $txt.value = $ });
+  });
+  addEventListener("dblclick", function($){
+    confirm("Wanna download a copy of decoded data?") && open("data:application/octet-stream," + encodeURIComponent($txt.value.replace(/\r\n?|\n/g, '\r\n')), "_self");
+  });
+}
+</script>
